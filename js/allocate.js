@@ -32,7 +32,7 @@
       const def = FM.parts[b.id];
       if (!def) return;
       counts[b.id] = (counts[b.id] || 0) + 1;
-      res.inst.push({ uid: b.uid, def, n: counts[b.id], total: totals[b.id] });
+      res.inst.push({ uid: b.uid, def, n: counts[b.id], total: totals[b.id], want: b.pins || {} });
     });
 
     // Analog parts: use the board's own analog pins, or add an ADS1115 for boards without them (Pi).
@@ -78,7 +78,7 @@
       const list = (prefer || []).concat(board.gpioPool);
       return list.find((id) => isFree(id) && pinOk(id, sig));
     };
-    const each = (kind, fn) => live.forEach((inst) => inst.def.sig.forEach((s, idx) => { if (s.k === kind) fn(inst, s, idx); }));
+    const each = (kind, fn) => live.forEach((inst) => inst.def.sig.forEach((s, idx) => { if (s.k === kind && inst.pins[idx] == null) fn(inst, s, idx); }));
 
     // ---- 1. I2C: one shared bus ----
     const addrs = {};
@@ -152,6 +152,24 @@
       addCfg('dtoverlay=max98357a');
     });
 
+    // ---- 4b. Pins you chose yourself (the wiring checker's "use my wiring") ----
+    let w1Pin = null;
+    live.forEach((inst) => inst.def.sig.forEach((s, idx) => {
+      const id = (inst.want || {})[idx];
+      if (!id || !['gpio', 'pwm', 'adc', 'ws', 'w1'].includes(s.k) || !board.pins[id] || !pinOk(id, s)) return;
+      if (s.k === 'w1' && w1Pin) return; // all probes share the first chosen 1-Wire pin
+      if (!isFree(id)) return;
+      if (s.k === 'adc') {
+        const slot = board.adc.find((a) => a.pin === id);
+        if (!slot) return;
+        inst.adcCh = slot.ch; inst.adcPin = slot.pin;
+      }
+      if (s.k === 'w1') w1Pin = id;
+      claim(inst, idx, id);
+      inst.notes.push(s.p + ' is on ' + FM.pinRef(board, id) + ', the pin you wired it to.');
+    }));
+    if (w1Pin && board.family === 'pi') { const g = board.pins[w1Pin].gpio; addCfg(g === 4 ? 'dtoverlay=w1-gpio' : 'dtoverlay=w1-gpio,gpiopin=' + g); }
+
     // ---- 5. Addressable LEDs ----
     each('ws', (inst, s, idx) => {
       const pref = Array.isArray(board.bus.ws) ? board.bus.ws.filter((id) => isFree(id) && !(id === '19' && res.busUsed.spi)) : [];
@@ -161,7 +179,6 @@
     });
 
     // ---- 6. 1-Wire: all probes share one pin ----
-    let w1Pin = null;
     each('w1', (inst, s, idx) => {
       if (!w1Pin) {
         const b = board.bus.w1 || {};

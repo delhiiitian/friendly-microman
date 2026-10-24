@@ -292,3 +292,74 @@ footer { color: var(--muted); font-size: .8rem; padding-block: 0 30px; }
 .v-strip i { width: 18px; height: 18px; border-radius: 3px; display: block; }
 table.csv { border-collapse: collapse; font-family: var(--font-mono); font-size: .76rem; font-variant-numeric: tabular-nums; }
 table.csv th, table.csv td { border: 1px solid var(--line); padding: 2px 6px; text-align: right; white-space: nowrap; }
+
+/* Live graphs: one small chart per value */
+.charts { display: grid; gap: 8px; margin-bottom: 8px; }
+.chart-row { display: grid; grid-template-columns: minmax(90px, 30%) 1fr; gap: 10px; align-items: center; }
+.chart-name { display: grid; line-height: 1.25; min-width: 0; }
+.chart-name .mono { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-name b { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+.chart-name small { color: var(--muted); font-weight: 400; font-size: .75rem; }
+.chart-plot { position: relative; padding-right: 44px; }
+.chart-plot svg { display: block; width: 100%; height: 56px; overflow: visible; cursor: crosshair; touch-action: pan-y; }
+.chart-line { fill: none; stroke: var(--read); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: var(--read); stroke: var(--surface); stroke-width: 2; }
+.chart-base { stroke: var(--line); stroke-width: 1; }
+.chart-cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; }
+.chart-range { position: absolute; right: 0; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: space-between; font-size: .7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chart-tip { position: absolute; top: -26px; transform: translateX(-50%); background: var(--ink); color: var(--surface); font-size: .75rem; padding: 2px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+
+/* Pretend phone for Telegram messages */
+.v-phone { background: var(--sunk); border-radius: 12px; padding: 8px; display: grid; gap: 6px; }
+.v-bubble { background: var(--surface); border: 1px solid var(--line); border-radius: 12px 12px 12px 3px; padding: 6px 10px; max-width: 92%; overflow-wrap: anywhere; }
+.v-bubble small { display: block; color: var(--muted); font-size: .7rem; text-align: right; }
+
+/* Projects dialog */
+dialog#projDlg { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 16px 18px 18px; box-shadow: 0 20px 60px #0004; }
+dialog#projDlg::backdrop { background: #0007; }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dlg-head .x { font-size: 1.4rem; background: none; border: 0; cursor: pointer; color: var(--muted); line-height: 1; padding: 4px 8px; }
+#projBody textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--sunk); padding: 8px; font-family: var(--font-mono); font-size: .8rem; resize: vertical; }
+.projlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.projlist li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px; }
+.projlist .icons { display: flex; gap: 2px; }
+.projlist .t { display: grid; min-width: 0; line-height: 1.25; }
+.projlist .t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projlist small { color: var(--muted); }
+label.btn { cursor: pointer; }
+
+/* Wiring checker */
+.wirecheck { margin-top: 10px; border: 1px dashed var(--line); border-radius: 10px; padding: 10px; }
+.wc-row { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.wc-row:first-of-type { border-top: 0; }
+.wc-row select { min-width: 0; width: 100%; }
+.wc-row .verdict { grid-column: 2; font-size: .82rem; color: var(--muted); }
+.wc-row .verdict b { color: var(--ink); margin-right: 4px; }
+.wc-row.lvl-ok .verdict b { color: var(--ok); }
+.wc-row.lvl-moved .verdict b { color: var(--read); }
+.wc-row.lvl-warn .verdict b { color: var(--warn); }
+.wc-row.lvl-bad .verdict b, .wc-row.lvl-danger .verdict b { color: var(--bad); }
+.wc-row.lvl-danger { background: var(--bad-bg); border-radius: 6px; padding: 6px; }
+
+/* Lessons and the coach card */
+.lesson .eyebrow { margin-top: 2px; }
+.tag.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.coach { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 560px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; box-shadow: 0 12px 40px #0003; z-index: 15; font-size: .9rem; }
+.coach-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.coach-head .x { background: none; border: 0; font-size: 1.3rem; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; }
+.coach-bar { height: 4px; background: var(--sunk); border-radius: 4px; margin: 8px 0; overflow: hidden; }
+.coach-bar i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.coach-steps { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.coach-steps li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; color: var(--muted); font-size: .84rem; }
+.coach-steps li.done .mark { color: var(--ok); }
+.coach-steps li.now { color: var(--ink); font-size: .92rem; }
+.coach-steps li.now .mark { color: var(--accent); }
+.coach-done { margin: 8px 0 10px; }
+@keyframes flash { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+.flash { animation: flash 1.2s ease-out 2; border-radius: var(--radius); }
+@media (max-width: 700px) {
+  .coach { left: 8px; right: 8px; width: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-height: 42vh; padding: 10px 12px; }
+  .coach-steps li.done, .coach-steps li.todo { display: none; }
+}
+@media (max-width: 700px) { body.coaching .toast { bottom: auto; top: calc(10px + env(safe-area-inset-top, 0px)); } }

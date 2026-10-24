@@ -55,6 +55,20 @@ FM.boardOrder.forEach((bid) => {
       const out = FM.generate(board, build, program, { title: pid }, lang);
       check(bid, lang, 'part ' + pid, out.code);
     });
+    // Every built-in output (print, CSV, graph, MQTT, Telegram) with awkward settings.
+    const sensor = ['bme280', 'pot'].find((id) => FM.parts[id].families.includes(board.family));
+    const build = [{ uid: 's1', id: sensor }];
+    const program = FM.newProgram();
+    FM.parts[sensor].values.filter((v) => !v.text).forEach((v) => program.reads.push({ uid: 's1', k: v.k, name: v.k }));
+    program.reads.push({ uid: 'sys', k: 'uptime', name: 'uptime' });
+    program.steps.push({ t: 'limit', key: program.reads[0].name, op: '>', val: 10 });
+    Object.assign(program.net, { ssid: 'My "home" wifi', pass: 'p\\a"ss', broker: 'broker.local', port: 1884, token: '123:ab"c', chat: '42' });
+    const outs = FM.builtinOutputs(board, lang);
+    outs.forEach((o, k) => program.actions.push({ id: 'n' + k, uid: o.uid, act: o.act, when: 'alert', every: 30, msg: 'Too high: {' + program.reads[0].name + '} "quoted"', topic: 'home/' + bid }));
+    const out = FM.generate(board, build, program, { title: 'net' }, lang);
+    if (FM.hasNetwork(board, lang) && !/telegram|Telegram/.test(out.code)) fail(bid + ' ' + lang + ': Telegram missing');
+    if (!/plot/i.test(out.code)) fail(bid + ' ' + lang + ': graph output missing');
+    check(bid, lang, 'outputs', out.code);
   });
 });
 
@@ -73,6 +87,11 @@ FM.boardOrder.forEach((bid) => {
   const bmes = A.inst.filter((i) => i.def.id === 'bme280');
   if (bmes.length === 2 && bmes[0].addr === bmes[1].addr) fail(bid + ': two BME280 on the same address');
 });
+
+// Graph lines: what the generated code prints is what the app plots.
+const parsed = FM.plotParse('co2:812 temperature:22.4,uptime:5');
+if (!parsed || parsed.co2 !== 812 || parsed.temperature !== 22.4 || parsed.uptime !== 5) fail('plotParse');
+if (FM.plotParse('CO2 is 812 ppm') !== null) fail('plotParse should ignore normal text');
 
 console.log('checked', checked, 'programs;', failed ? failed + ' failures' : 'all passed');
 process.exit(failed ? 1 : 0);

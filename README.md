@@ -16,6 +16,18 @@ parts, then send the real code to your board.
   There is also a command listener mode: typed or spoken commands with your own rules.
 - **Try it without hardware.** Every part works as a virtual part. Sensors become sliders (or drift, or go up
   and down), and outputs become a virtual OLED, LCD, LED, buzzer, speaker (your browser talks), servo dial and terminal.
+- **Live graphs.** "Draw a live graph" plots every value, in the simulator and in the Serial monitor while the real
+  board runs (it prints `name:value` lines, which the Arduino IDE's Serial Plotter also understands).
+- **Alerts over the network.** Send readings to MQTT (Home Assistant, Node-RED…) or a Telegram message to your phone,
+  from a Pi, a Pico W, an ESP32 or an ESP8266. Wi-Fi details go in the block; the code joins the network itself.
+- **Wiring checker.** Tell it where each wire really goes. It marks every wire right, works (different pin, the code
+  can follow your wiring), careful, wrong (SDA/SCL swapped, TX/RX not crossed, pin already used) or stop (power the
+  wrong way round, 5 V on a 3.3 V part, a signal on a power pin).
+- **Guided lessons.** Six short lessons (blink an LED, read a temperature, CO₂ alarm, gyro x axis, make the Pi talk,
+  graph and share) with a coach that ticks each step by itself.
+- **Save and share.** Keep projects in the browser, share them as a link or a short code, or as a project file.
+  Share codes leave out your Wi-Fi password and Telegram token, and a shared project is checked field by field
+  before it is opened.
 - **Real code, always visible.** Python 3 for Raspberry Pi, MicroPython for Pico/ESP32/ESP8266, and Arduino C++.
   Edit it freely; the blocks stop overwriting it until you ask.
 - **Libraries.** Each part knows its library (pip, MicroPython `mip`, Arduino Library Manager). The Libraries tab
@@ -61,7 +73,11 @@ token that only pages it serves can read, so other websites cannot use it.
 ```sh
 node tests/generate.test.js   # every starter project and part, on every board and language
 node tests/upload.test.js     # the MicroPython raw-REPL upload, replayed in real Python
+node tests/projects.test.js   # share codes round-trip; crafted projects cannot inject code
+node tests/wiring.test.js     # the wiring checker on every board
+node tests/lessons.test.js    # every lesson can be finished
 ```
+`npm test` runs them all.
 
 The generator test compiles all Python and MicroPython output with `python3 -m py_compile` and checks all Arduino
 output with `g++ -fsyntax-only` against small stand-ins for the Arduino core and libraries (`tests/arduino-stubs`).
@@ -80,6 +96,11 @@ js/allocate.js        pin planner
 js/gen/*.js           code generators (python, micropython, arduino)
 js/templates.js       starter projects
 js/program.js         program helpers shared by UI, simulator and tests
+js/gen/net.js         graph, MQTT and Telegram outputs for every language
+js/projects.js        save, share codes, project files
+js/wirecheck.js       wiring checker
+js/lessons.js         guided lessons
+js/chart.js           live graphs
 js/sim.js             simulator with virtual parts
 js/serial.js          Web Serial + MicroPython upload
 js/helper-client.js   talks to the local helper

@@ -23,11 +23,14 @@
   L({ id: 'vosk', kind: 'pip', pkg: 'vosk sounddevice', name: 'Vosk speech recognition', desc: 'Offline voice commands. Downloads a small English model the first time.' });
   L({ id: 'portaudio', kind: 'apt', pkg: 'libportaudio2', name: 'PortAudio', desc: 'Microphone access for sounddevice.' });
   L({ id: 'espeak', kind: 'apt', pkg: 'espeak-ng', name: 'eSpeak NG', desc: 'Text to speech: makes the Pi talk.' });
+  L({ id: 'py-paho', kind: 'pip', pkg: 'paho-mqtt>=2', name: 'Paho MQTT', desc: 'Sends readings to an MQTT server (Home Assistant, Node-RED, dashboards).' });
   L({ id: 'picamera2', kind: 'apt', pkg: 'python3-picamera2', name: 'Picamera2', desc: 'Camera Module photos and video. Comes with Raspberry Pi OS.', preinstalled: true });
 
   // MicroPython (installed onto the board with mpremote mip)
   L({ id: 'mip-ssd1306', kind: 'mip', pkg: 'ssd1306', name: 'ssd1306', desc: 'OLED driver from micropython-lib.' });
   L({ id: 'mip-tm1637', kind: 'mip', pkg: 'github:mcauser/micropython-tm1637', name: 'micropython-tm1637', desc: '4-digit display driver.' });
+  L({ id: 'mip-umqtt', kind: 'mip', pkg: 'umqtt.simple', name: 'umqtt.simple', desc: 'Small MQTT client from micropython-lib.' });
+  L({ id: 'mip-requests', kind: 'mip', pkg: 'requests', name: 'requests', desc: 'HTTP requests, for Telegram messages. Already built into ESP32 and Pico W firmware.' });
 
   // Arduino (arduino-cli lib install "<name>")
   L({ id: 'ard-scd4x', kind: 'arduino', pkg: 'SparkFun SCD4x Arduino Library', name: 'SparkFun SCD4x', desc: 'SCD40/SCD41 CO₂ sensors.' });
@@ -45,5 +48,6 @@
   L({ id: 'ard-tm1637', kind: 'arduino', pkg: 'TM1637', name: 'TM1637 (avishorp)', desc: '4-digit display.' });
   L({ id: 'ard-servo', kind: 'arduino', pkg: 'Servo', name: 'Servo', desc: 'Servo motors on AVR boards. ESP32 uses ESP32Servo instead.' });
   L({ id: 'ard-esp32servo', kind: 'arduino', pkg: 'ESP32Servo', name: 'ESP32Servo', desc: 'Servo motors on ESP32.' });
+  L({ id: 'ard-pubsub', kind: 'arduino', pkg: 'PubSubClient', name: 'PubSubClient', desc: 'MQTT client for ESP32 and ESP8266.' });
   L({ id: 'ard-neopixel', kind: 'arduino', pkg: 'Adafruit NeoPixel', name: 'Adafruit NeoPixel', desc: 'WS2812 LED strips.' });
 })();

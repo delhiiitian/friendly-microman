@@ -138,6 +138,7 @@
     const names = FM.programNames(A, prog);
     const limit = (prog.steps || []).find((s) => s.t === 'limit');
     const loop = [];
+    const netFuncs = [];
     let sysUsed = false;
     const readers = {};
     (prog.reads || []).forEach((r) => { if (r.uid === 'sys') readers.sys = 1; else { const i = A.byUid[r.uid]; if (i && i.supported) { use(i); readers[i.uid] = i; } } });
@@ -169,6 +170,10 @@
       const tpl = a.msg || prog.message || FM.defaultMessage(A, prog);
       let label, code, msg = false, always = false;
       if (a.uid === 'print') { label = 'Print to the Serial Monitor'; code = 'Serial.println(msg);'; msg = true; }
+      else if (FM.NET_OUTPUTS.includes(a.uid)) {
+        const r = FM.netAction('arduino', a, A, prog, { incs, decls, funcs: netFuncs, libs, names });
+        label = r.label; code = r.code; msg = !!r.msg;
+      }
       else if (a.uid === 'log') return;
       else {
         const i = A.byUid[a.uid];
@@ -211,7 +216,7 @@
     out.push('');
     out.push(AR_HELPERS(smooths.length > 0, (prog.actions || []).some((a) => a.every > 0)));
     out.push('');
-    if (reads.length) out.push(reads.join('\n\n') + '\n');
+    if (reads.length || netFuncs.length) out.push(reads.concat(netFuncs).join('\n\n') + '\n');
     out.push('void setup() {\n  Serial.begin(115200);\n' + (needI2C ? '  Wire.begin();\n' : '') + setups.filter(Boolean).map((s) => FM.indent(s, 1).replace(/^    /gm, '  ')).join('\n') + '\n  Serial.println(F("Running."));\n}');
     out.push('');
     out.push('void loop() {\n' + loop.map((l) => (l ? FM.indent(l, 1).replace(/^    /gm, '  ') : '')).join('\n') + '\n\n  delay(INTERVAL_MS);\n}');

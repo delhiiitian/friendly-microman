@@ -72,7 +72,7 @@
   };
 
   // Which part instance an action or rule points at.
-  FM.actionTarget = function (A, a) { return a.uid === 'print' || a.uid === 'log' ? null : A.byUid[a.uid]; };
+  FM.actionTarget = function (A, a) { return a.uid === 'print' || a.uid === 'log' || FM.NET_OUTPUTS.includes(a.uid) ? null : A.byUid[a.uid]; };
 
   // Code writer with indentation.
   FM.Writer = function () {

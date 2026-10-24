@@ -222,7 +222,7 @@
     let msgUsed = false;
     (prog.actions || []).forEach((a, k) => {
       const tpl = a.msg || prog.message || FM.defaultMessage(A, prog);
-      const runs = actionCode(A, a, k, { use, libs, imports, helpers, ctx, hasLimit: !!limit });
+      const runs = actionCode(A, a, k, { use, libs, imports, helpers, ctx, prog, hasLimit: !!limit });
       if (!runs) return;
       const cond = [];
       if (a.when === 'alert') cond.push('alert');
@@ -254,6 +254,7 @@
 
   function actionCode(A, a, k, t) {
     if (a.uid === 'print') return { label: 'Print', code: 'print(msg)', msg: true };
+    if (FM.NET_OUTPUTS.includes(a.uid)) return FM.netAction('python', a, A, t.prog, { imports: t.imports, libs: t.libs, setting: t.ctx.setting, helper: t.ctx.helper });
     if (a.uid === 'log') {
       t.imports.add('import csv'); t.imports.add('import os');
       t.ctx.helper('LOG_FILE = "readings.csv"\n\ndef log_csv(values):\n    new_file = not os.path.exists(LOG_FILE)\n    with open(LOG_FILE, "a", newline="") as f:\n        out = csv.writer(f)\n        if new_file:\n            out.writerow(["time"] + list(values))\n        out.writerow([time.strftime("%Y-%m-%d %H:%M:%S")] + list(values.values()))');

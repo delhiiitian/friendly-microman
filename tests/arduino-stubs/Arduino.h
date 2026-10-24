@@ -6,6 +6,7 @@
 #include <cstring>
 #include <string>
 #include <algorithm>
+#include <cctype>
 using std::isnan; using std::round; using std::fabs; using std::min; using std::max;
 typedef uint8_t byte;
 enum { LOW = 0, HIGH = 1, INPUT = 0, OUTPUT = 1, INPUT_PULLUP = 2, SERIAL_8N1 = 0 };
@@ -31,6 +32,10 @@ class String {
   String operator+(const char *o) const { return String(s + o); }
   friend String operator+(const char *a, const String &b) { return String(std::string(a) + b.s); }
   String substring(unsigned a, unsigned b) const { return String(s.substr(a, b - a)); }
+  unsigned length() const { return (unsigned)s.size(); }
+  char operator[](unsigned i) const { return s[i]; }
+  String &operator+=(char c) { s += c; return *this; }
+  const char *c_str() const { return s.c_str(); }
   void toLowerCase() {} void trim() {}
   int indexOf(const char *x) const { auto p = s.find(x); return p == std::string::npos ? -1 : (int)p; }
 };

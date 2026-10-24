@@ -265,6 +265,10 @@
         const tpl = a.msg || prog.message || FM.defaultMessage(A, prog);
         let label, code, msg = false, always = false;
         if (a.uid === 'print') { label = 'Print to the serial console'; code = 'print(msg)'; msg = true; }
+        else if (FM.NET_OUTPUTS.includes(a.uid)) {
+          const r = FM.netAction('micropython', a, A, prog, { imports, libs, setting: ctx.setting, helper: (s) => { if (!helpers.includes(s)) helpers.push(s); } });
+          label = r.label; code = r.code; msg = !!r.msg;
+        }
         else if (a.uid === 'log') {
           label = 'Save to log.csv on the board';
           helpers.push('def log_csv(values):\n    with open("log.csv", "a") as f:\n        f.write(",".join([str(time.time())] + [str(x) for x in values.values()]) + "\\n")');

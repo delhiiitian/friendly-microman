@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<header class="topbar">
+<header class="topbar" id="top">
   <div class="wrap">
     <div class="brand"><h1>friendly-microman</h1><span>wire it, build it, run it</span></div>
     <nav class="nav" aria-label="Sections">
@@ -20,6 +20,7 @@
     </nav>
     <label for="boardSel">Board <select id="boardSel"></select></label>
     <label for="langSel">Language <select id="langSel"></select></label>
+    <button class="pill" id="projectsBtn" type="button" title="Save, open and share projects">My projects</button>
     <button class="pill" id="helperPill" type="button" title="Local helper for compiling, uploading and installing libraries"><span class="dot"></span><span id="helperText">Helper offline</span></button>
     <button class="pill" id="serialPill" type="button" title="Connect a board over USB (Chrome or Edge)"><span class="dot"></span><span id="serialText">Connect USB board</span></button>
   </div>
@@ -27,6 +28,11 @@
 
 <div class="wrap">
   <main>
+    <section aria-labelledby="lessonsTitle">
+      <div class="panel-head"><h2 id="lessonsTitle">Learn step by step</h2><p>Short lessons that check each step for you. No hardware needed: the virtual parts stand in.</p></div>
+      <div class="starters" id="lessons"></div>
+    </section>
+
     <section aria-labelledby="startersTitle">
       <div class="panel-head"><h2 id="startersTitle">Start from a project</h2><p>Each one adds the parts and the program. Change anything afterwards.</p></div>
       <div class="starters" id="starters"></div>
@@ -63,7 +69,9 @@
   </main>
   <footer>friendly-microman · Pin maps are simplified drawings; always check your board's printed labels before powering up.</footer>
 </div>
+<aside id="coach" class="coach" aria-live="polite" hidden></aside>
 <div id="toast" class="toast" hidden></div>
+<dialog id="projDlg" aria-labelledby="projDlgTitle"><div id="projBody"></div></dialog>
 
 <script src="js/core.js"></script>
 <script src="js/boards/pi.js"></script>
@@ -74,13 +82,18 @@
 <script src="js/libraries.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/allocate.js"></script>
+<script src="js/wirecheck.js"></script>
 <script src="js/gen/common.js"></script>
+<script src="js/gen/net.js"></script>
 <script src="js/gen/python.js"></script>
 <script src="js/gen/micropython.js"></script>
 <script src="js/gen/arduino.js"></script>
 <script src="js/templates.js"></script>
 <script src="js/program.js"></script>
+<script src="js/projects.js"></script>
+<script src="js/chart.js"></script>
 <script src="js/sim.js"></script>
+<script src="js/lessons.js"></script>
 <script src="js/serial.js"></script>
 <script src="js/helper-client.js"></script>
 <script src="js/app.js"></script>

@@ -39,3 +39,10 @@ If the new board belongs to a new family (say, an STM32 or a BBC micro:bit), als
    `read` body that returns or stores its values, and `acts` for each action.
 4. Give it a virtual view in `js/sim.js` (`drawOutput`) and a sensible range in `RANGE` if it is a sensor.
 5. Run `node tests/generate.test.js`. It generates code for your part on every board and checks it compiles.
+
+## A new lesson
+
+Add it to `js/lessons.js`. Each step has the text to show, a `target` section to point at (`parts`, `ability`,
+`program`, `sim`, `code` or `top`), and a `check(c)` that returns true once the learner has done it (see
+`FM.lessonContext` for what `c` offers). Use `manual: true` for a step that can only be confirmed with Next.
+Then add the learner's moves to `SOLVE` in `tests/lessons.test.js`, which proves every step can be finished.

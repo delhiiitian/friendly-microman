@@ -11,7 +11,7 @@
   };
   const START = { co2: 650, temperature: 22, humidity: 45, pressure: 1013, eco2: 600, tvoc: 40, air: 20, distance: 80, ax: 0, ay: 0, az: 9.8, gx: 0, gy: 0, gz: 0, lux: 300, light: 60, moisture: 55, knob: 50, cpu_temp: 48, chip_temp: 27, motion: 0, pressed: 0 };
 
-  const sim = (FM.sim = { running: false, speed: 1, sound: true, sensors: {}, out: {}, log: [], rows: [], history: {}, last: {}, ticks: 0, t0: 0, timer: null });
+  const sim = (FM.sim = { running: false, speed: 1, sound: true, sensors: {}, out: {}, log: [], rows: [], history: {}, last: {}, ticks: 0, t0: 0, timer: null, plot: FM.plotStore(), tg: [], mqtt: null });
   let el = null, ctx = null;
 
   sim.mount = (node, getCtx) => { el = node; ctx = getCtx; bind(); };
@@ -72,6 +72,9 @@
       const hasLimit = prog.steps.some((s) => s.t === 'limit');
       switch (a.act) {
         case 'print': addLog(msg); break;
+        case 'plot': FM.plotPush(sim.plot, v); break;
+        case 'mqtt': sim.mqtt = { topic: a.topic || 'friendly-microman/readings', payload: JSON.stringify(v), n: (sim.mqtt ? sim.mqtt.n : 0) + 1, at: now }; break;
+        case 'telegram': sim.tg.push({ text: msg, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }); sim.tg = sim.tg.slice(-4); addLog('\u2709 Telegram: ' + msg); break;
         case 'log': sim.rows.push([new Date().toLocaleTimeString()].concat(Object.values(v).map((x) => (typeof x === 'number' ? Math.round(x * 10) / 10 : x)))); sim.rows = sim.rows.slice(-6); sim.rowHead = ['time'].concat(Object.keys(v)); break;
         case 'show': o.text = msg; break;
         case 'say': o.text = msg; o.at = now; speak(msg); addLog('\u{1F50A} ' + msg); break;
@@ -142,10 +145,10 @@
 
   // ---------- run control ----------
   sim.start = function () {
-    sim.running = true; sim.t0 = Date.now(); sim.ticks = 0; sim.history = {}; sim.last = {};
+    sim.running = true; sim.t0 = Date.now(); sim.ticks = 0; sim.history = {}; sim.last = {}; sim.plot = FM.plotStore(); sim.tg = []; sim.mqtt = null;
     schedule(); tick(); sim.render();
   };
-  sim.reset = function () { sim.running = false; clearTimeout(sim.timer); sim.out = {}; sim.log = []; sim.rows = []; sim.sensors = {}; sim.lastValues = null; };
+  sim.reset = function () { sim.running = false; clearTimeout(sim.timer); sim.out = {}; sim.log = []; sim.rows = []; sim.sensors = {}; sim.lastValues = null; sim.touched = false; sim.plot = FM.plotStore(); sim.tg = []; sim.mqtt = null; };
   sim.stop = function () { sim.running = false; clearTimeout(sim.timer); sim.render(); };
   function schedule() {
     clearTimeout(sim.timer);
@@ -207,6 +210,14 @@
       h += '<div class="vcard"><b>' + esc(i.label) + '</b>' + drawOutput(i, o) + '</div>';
     });
     if (!listen && sim.lastValues && prog.steps.some((s) => s.t === 'limit')) h = '<div class="vcard"><b>Check</b> <span class="tag" style="background:' + (sim.alert ? 'var(--bad-bg)' : 'var(--sunk)') + '">' + (sim.alert ? 'true' : 'false') + '</span></div>' + h;
+    const has = (uid) => !listen && prog.actions.some((a) => a.uid === uid);
+    if (has('plot')) {
+      const units = {};
+      FM.programNames(A, prog).forEach((n) => { units[n.name] = n.unit || ''; });
+      h += '<div class="vcard"><b>Live graph</b>' + (FM.chart(sim.plot, units) || '<p class="small muted" style="margin:0">' + (sim.running ? 'Waiting for the first reading…' : 'Run the program to draw the values.') + '</p>') + '</div>';
+    }
+    if (has('telegram')) h += '<div class="vcard"><b>Telegram (a pretend phone)</b><div class="v-phone">' + (sim.tg.length ? sim.tg.map((m) => '<div class="v-bubble">' + esc(m.text) + '<small>' + esc(m.time) + '</small></div>').join('') : '<p class="small muted" style="margin:0">Messages from your bot appear here.</p>') + '</div></div>';
+    if (has('mqtt')) h += '<div class="vcard"><b>MQTT</b>' + (sim.mqtt ? '<div class="small"><span class="mono">' + esc(sim.mqtt.topic) + '</span> · sent ' + sim.mqtt.n + '×</div><div class="monitor sim-term" style="height:auto">' + esc(sim.mqtt.payload) + '</div>' : '<p class="small muted" style="margin:0">Nothing sent yet.</p>') + '</div>';
     h += '<div class="vcard"><b>' + (board.family === 'pi' ? 'Terminal' : 'Serial monitor') + '</b><div class="monitor sim-term" id="simLog">' + esc(sim.log.join('\n') || (sim.running || listen ? '' : 'Press "Run the program" to start.')) + '</div></div>';
     if (sim.rows.length) h += '<div class="vcard"><b>readings.csv</b><div style="overflow-x:auto"><table class="csv"><tr>' + sim.rowHead.map((x) => '<th>' + esc(x) + '</th>').join('') + '</tr>' + sim.rows.map((r) => '<tr>' + r.map((x) => '<td>' + esc(x) + '</td>').join('') + '</tr>').join('') + '</table></div></div>';
     box.innerHTML = h;
@@ -252,7 +263,7 @@
       const t = e.target;
       if (t.dataset.simval) {
         const s = sim.sensors[t.dataset.simval];
-        s.value = +t.value; s.mode = 'slider';
+        s.value = +t.value; s.mode = 'slider'; sim.touched = true;
         const out = el.querySelector('[data-simout="' + CSS.escape(t.dataset.simval) + '"]');
         if (out) out.textContent = fmtNum(s.value, s.step) + out.textContent.replace(/^[-\d.]+/, '');
         const sel = el.querySelector('[data-simmode="' + CSS.escape(t.dataset.simval) + '"]');
@@ -261,8 +272,8 @@
     });
     el.addEventListener('change', (e) => {
       const t = e.target;
-      if (t.dataset.simmode) { sim.sensors[t.dataset.simmode].mode = t.value; }
-      if (t.dataset.simbool) { sim.sensors[t.dataset.simbool].value = t.checked ? 1 : 0; sim.sensors[t.dataset.simbool].mode = 'slider'; if (sim.running) tick(); }
+      if (t.dataset.simmode) { sim.sensors[t.dataset.simmode].mode = t.value; sim.touched = true; }
+      if (t.dataset.simbool) { sim.touched = true; sim.sensors[t.dataset.simbool].value = t.checked ? 1 : 0; sim.sensors[t.dataset.simbool].mode = 'slider'; if (sim.running) tick(); }
       if (t.dataset.simspeed) { sim.speed = +t.value; schedule(); }
       if (t.dataset.simsound) { sim.sound = t.checked; if (!sim.sound && 'speechSynthesis' in window) speechSynthesis.cancel(); }
     });

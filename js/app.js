@@ -13,7 +13,7 @@
   let S = null;
   let A = null; // pin plan for the current build
   let G = null; // generated code
-  const ui = { picker: null, pin: null, libQuery: '', monitor: '', toastTimer: null, undo: null, busy: '' };
+  const ui = { picker: null, pin: null, libQuery: '', monitor: '', toastTimer: null, undo: null, busy: '', plot: FM.plotStore(), partial: '', flags: {}, coachHtml: '' };
 
   function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) { /* storage blocked */ } }
   function load() { try { return JSON.parse(localStorage.getItem(STORE)); } catch (e) { return null; } }
@@ -183,7 +183,29 @@
       h += '<div class="section-title do">Do</div><div class="actions-list">' + def.actions.map((a) => '<button type="button" class="btn" data-addact="' + i.uid + '|' + a.k + '">+ ' + esc(a.l) + '</button>').join('') + '</div>';
     }
     h += '<div class="section-title wire">Wiring</div>' + wireList(i) + instNotes(i);
+    const custom = (S.build.find((b) => b.uid === i.uid) || {}).pins;
+    h += ui.wire && ui.wire.uid === i.uid ? wireChecker(i) : '<div class="line" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn" data-wcopen="' + i.uid + '">Check my wiring</button>' + (custom ? '<button type="button" class="btn ghost" data-wcreset="' + i.uid + '">Go back to the planned pins</button>' : '') + '</div>';
     el.innerHTML = h;
+  }
+
+  // Wiring checker: pick where each wire really goes, get a verdict per wire.
+  const VERDICT = { ok: ['\u2713', 'Right'], moved: ['\u21aa', 'Works'], warn: ['\u26a0', 'Careful'], bad: ['\u2717', 'Wrong'], danger: ['\u26d4', 'Stop'], todo: ['\u25cb', 'Not yet'] };
+  function wireChecker(i) {
+    const b = board();
+    const c = FM.checkWiring(A, i, ui.wire.chosen);
+    if (c.worst !== 'todo') ui.flags.wireChecked = true;
+    const groups = [['Power', (p) => ['v3', 'v5', 'vin'].includes(p.type)], ['Ground', (p) => p.type === 'gnd'], ['Pins', (p) => !['v3', 'v5', 'vin', 'gnd'].includes(p.type)]];
+    const ids = Object.keys(b.pins);
+    const options = (cur) => '<option value="">pick a pin</option>' + groups.map(([g, f]) => '<optgroup label="' + g + '">' + ids.filter((id) => f(b.pins[id])).map((id) => '<option value="' + esc(id) + '"' + (cur === id ? ' selected' : '') + '>' + esc(FM.pinRef(b, id)) + '</option>').join('') + '</optgroup>').join('');
+    let h = '<div class="wirecheck"><p class="small" style="margin:0 0 8px">For each wire on the ' + esc(i.short) + ', pick the ' + esc(b.short) + ' pin it really goes to. Or practise: wire it from memory and see what you got right.</p>';
+    h += c.rows.map((r) => '<div class="wc-row lvl-' + r.level + '"><span class="dev mono">' + esc(r.devPin) + '</span><select data-wc="' + r.idx + '" aria-label="Board pin for ' + esc(r.devPin) + '">' + options(r.chosen) + '</select><span class="verdict"><b>' + VERDICT[r.level][0] + ' ' + VERDICT[r.level][1] + '</b> ' + esc(r.msg) + '</span></div>').join('');
+    const summary = {
+      danger: 'Unplug the power before you change anything.', bad: 'Some wires need to move. It will not work like this yet.',
+      warn: 'This can work, but read the warnings.', todo: 'Pick the remaining pins.', moved: 'All good. Some wires are on other pins than planned; the code can follow your wiring.', ok: 'All wires are right. Ready to power up.',
+    }[c.worst];
+    h += '<p class="note ' + (c.worst === 'danger' || c.worst === 'bad' ? 'bad' : c.worst === 'warn' ? 'warn' : 'tip') + '" role="status">' + esc(summary) + '</p>';
+    h += '<div class="line" style="display:flex;gap:8px;flex-wrap:wrap">' + (c.canFollow ? '<button type="button" class="btn primary" data-wcfollow="1">Use my wiring in the code</button>' : '') + '<button type="button" class="btn" data-wcfill="1">Show the answer</button><button type="button" class="btn ghost" data-wcclose="1">Close</button></div></div>';
+    return h;
   }
 
   function boardAbilities() {
@@ -210,7 +232,7 @@
     render();
   }
 
-  const ACT_DEFAULTS = { say: { when: 'alert', every: 60 }, beep: { when: 'alert', every: 10, n: 3 }, photo: { when: 'alert', every: 30 }, blink: { when: 'alert', every: 0, n: 3 }, show: { when: 'always', every: 0 }, print: { when: 'always', every: 0 }, log: { when: 'always', every: 0 }, onwhile: { when: 'always' }, angle: { when: 'always', angle: 90, angle2: 0 }, follow: { when: 'always', min: 0, max: 100 }, colour: { when: 'always', colour: '#ff3b30', colour2: '#00c853' }, number: { when: 'always' }, turn: { when: 'alert', every: 30, steps: 512 } };
+  const ACT_DEFAULTS = { say: { when: 'alert', every: 60 }, beep: { when: 'alert', every: 10, n: 3 }, photo: { when: 'alert', every: 30 }, blink: { when: 'alert', every: 0, n: 3 }, show: { when: 'always', every: 0 }, print: { when: 'always', every: 0 }, log: { when: 'always', every: 0 }, onwhile: { when: 'always' }, angle: { when: 'always', angle: 90, angle2: 0 }, follow: { when: 'always', min: 0, max: 100 }, colour: { when: 'always', colour: '#ff3b30', colour2: '#00c853' }, number: { when: 'always' }, turn: { when: 'alert', every: 30, steps: 512 }, plot: { when: 'always', every: 0 }, mqtt: { when: 'always', every: 30, topic: 'friendly-microman/readings' }, telegram: { when: 'alert', every: 600 } };
   function addAction(uid, act) {
     if (P().mode === 'listen') { // in listen mode, a speaker or screen becomes a reply channel
       if (act === 'say' || act === 'show' || act === 'print') { if (!P().listen.replies.includes(uid)) P().listen.replies.push(uid); render(); toast('Replies will also go to this part.'); return; }
@@ -326,6 +348,20 @@
     if (a.act === 'colour') h += '<div class="line"><span>' + (hasLimit ? 'check true' : 'colour') + '</span><input type="color" data-bind="' + p + '.colour" value="' + esc(a.colour || '#ff3b30') + '" aria-label="Colour">' + (hasLimit ? '<span>otherwise</span><input type="color" data-bind="' + p + '.colour2" value="' + esc(a.colour2 || '#000000') + '" aria-label="Other colour">' : '') + '</div>';
     if (a.act === 'beep' || a.act === 'blink') h += '<div class="line">' + num(p + '.n', a.n || 3, 'min="1" max="20"') + '<span>times</span></div>';
     if (a.act === 'turn') h += '<div class="line"><span>turn</span>' + num(p + '.steps', a.steps || 512) + '<span>steps (4096 = one turn)</span></div>';
+    if (a.act === 'plot') h += '<p class="small muted" style="margin:0">Draws every number as a line. You see it in Try it, and in the Serial monitor tab when the real board runs.</p>';
+    if (a.act === 'mqtt') {
+      h += '<div class="line"><span>topic</span>' + txt(p + '.topic', a.topic || 'friendly-microman/readings', 'size="22" aria-label="MQTT topic"') + '</div>' +
+        '<div class="line"><span>server</span>' + txt('net.broker', P().net.broker, 'size="16" aria-label="MQTT server"') + '<span>port</span>' + num('net.port', P().net.port, 'min="1" max="65535" aria-label="MQTT port"') + '</div>' +
+        '<p class="small muted" style="margin:0">Sends all values as JSON, e.g. to Home Assistant or Node-RED. The test server is public, so use your own for anything private.</p>';
+    }
+    if (a.act === 'telegram') {
+      h += '<div class="line"><span>bot token</span><input type="password" data-bind="net.token" value="' + esc(P().net.token) + '" size="18" autocomplete="off" aria-label="Telegram bot token" placeholder="from @BotFather"></div>' +
+        '<div class="line"><span>chat id</span>' + txt('net.chat', P().net.chat, 'size="12" aria-label="Telegram chat id" placeholder="from @userinfobot"') + '</div>' +
+        '<p class="small muted" style="margin:0">Make a bot with <a href="https://core.telegram.org/bots/tutorial" target="_blank" rel="noopener">@BotFather</a> in Telegram, send it one message, then put its token and your chat id here. Share links leave the token out.</p>';
+    }
+    if ((a.act === 'mqtt' || a.act === 'telegram') && lang() !== 'python') {
+      h += '<div class="line"><span>Wi-Fi</span>' + txt('net.ssid', P().net.ssid, 'size="12" aria-label="Wi-Fi name" placeholder="network name"') + '<input type="password" data-bind="net.pass" value="' + esc(P().net.pass) + '" size="10" autocomplete="off" aria-label="Wi-Fi password" placeholder="password"></div>';
+    }
     if (a.act === 'onwhile') h += '<p class="small muted" style="margin:0">' + (hasLimit ? 'On while the check is true, off otherwise.' : 'Add a Check step to decide when it is on. For now it stays on.') + '</p>';
     if (!followsCheck && !['follow', 'number'].includes(a.act)) {
       h += '<div class="line">' + (hasLimit ? sel(p + '.when', a.when, [['always', 'every reading'], ['alert', 'only when the check is true'], ['calm', 'only when the check is false']], 'data-change-render="1"') : '<span>every reading</span>') +
@@ -593,16 +629,115 @@
       const guess = FM.serial.guessBoards(FM.serial.info);
       if (guess.length) h += '<p class="note tip">This looks like ' + esc(guess[0].note) + '. ' + (guess.some((g) => g.board.id === S.board) ? '' : '<button type="button" class="btn small" data-setboard="' + guess[0].board.id + '">Switch to ' + esc(guess[0].board.short) + '</button>') + '</p>';
     }
+    h += '<div id="serialChart">' + serialChart() + '</div>';
     h += '<div class="monitor" id="monitor">' + esc(ui.monitor || (FM.serial.connected ? '' : 'Output from your board appears here.')) + '</div>';
     h += '<div class="sendline"><input type="text" id="sendText" placeholder="Type a command and press Enter" aria-label="Send to board"' + (FM.serial.connected ? '' : ' disabled') + '><button type="button" class="btn" data-send="1"' + (FM.serial.connected ? '' : ' disabled') + '>Send</button></div>';
     return h;
+  }
+
+  // ---------------- lessons ----------------
+  function renderLessons() {
+    const done = S.lessonsDone || [];
+    $('#lessons').innerHTML = FM.lessons.map((l) => {
+      const off = l.family && !FM.boardOrder.some((b) => FM.boards[b].family === l.family);
+      return '<button type="button" class="starter lesson' + (S.lesson && S.lesson.id === l.id ? ' current' : '') + '" data-lesson="' + l.id + '"' + (off ? ' disabled' : '') + '>' +
+        '<span class="icons">' + (l.parts.length ? l.parts.map((id) => FM.icon(FM.parts[id], 40)).join('') : FM.boardIcon(40)) + '</span>' +
+        '<span class="eyebrow">' + esc(l.level) + ' · ' + l.mins + ' min' + (l.family === 'pi' ? ' · Raspberry Pi' : '') + '</span>' +
+        '<strong>' + esc(l.title) + '</strong><p>' + esc(l.intro) + '</p>' + (done.includes(l.id) ? '<span class="tag ok">\u2713 Done</span>' : '') + '</button>';
+    }).join('');
+  }
+  function startLesson(id) {
+    const l = FM.lessons.find((x) => x.id === id);
+    const snap = snapshot();
+    if (l.family && board().family !== l.family) S.board = FM.boardOrder.find((b) => FM.boards[b].family === l.family);
+    S.build = []; S.program = FM.newProgram(); S.title = l.title; S.starter = null; S.sel = null; S.codeEdited = false;
+    S.lesson = { id, at: 0 };
+    ui.flags = {}; ui.wire = null; ui.coachHtml = '';
+    FM.sim.reset();
+    render();
+    toast('Lesson started with an empty project.', () => restore(snap));
+  }
+  function lessonState() {
+    const l = S.lesson && FM.lessons.find((x) => x.id === S.lesson.id);
+    if (!l) return null;
+    const ctx = FM.lessonContext(S, A, FM.sim, ui.flags);
+    const done = l.steps.map((s, k) => (s.manual ? S.lesson.at > k : !!s.check(ctx)));
+    let cur = done.indexOf(false);
+    if (cur < 0) cur = l.steps.length;
+    return { l, done, cur };
+  }
+  function renderCoach() {
+    const el = $('#coach');
+    const st = lessonState();
+    document.body.classList.toggle('coaching', !!st);
+    if (!st) { el.hidden = true; ui.coachHtml = ''; return; }
+    const { l, done, cur } = st;
+    let h = '<div class="coach-head"><span class="eyebrow">Lesson · ' + esc(l.title) + '</span><button type="button" class="x" data-lessonend="1" aria-label="Stop the lesson">\u00d7</button></div>';
+    if (cur >= l.steps.length) {
+      if (!(S.lessonsDone || []).includes(l.id)) { S.lessonsDone = (S.lessonsDone || []).concat([l.id]); save(); renderLessons(); }
+      h += '<p class="coach-done"><b>Well done!</b> You finished this lesson. Keep changing the project, or pick another lesson.</p><div class="line" style="display:flex;gap:8px"><button type="button" class="btn primary" data-goto="lessonsTitle">More lessons</button><button type="button" class="btn ghost" data-lessonend="1">Close</button></div>';
+    } else {
+      h += '<div class="coach-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + l.steps.length + '" aria-valuenow="' + cur + '"><i style="width:' + Math.round(cur / l.steps.length * 100) + '%"></i></div>';
+      h += '<ol class="coach-steps">' + l.steps.map((s, k) => '<li class="' + (k === cur ? 'now' : done[k] ? 'done' : 'todo') + '"><span class="mark" aria-hidden="true">' + (done[k] ? '\u2713' : k === cur ? '\u25cf' : '\u25cb') + '</span><span>' + (k === cur ? esc(s.text) : '<span class="sr-only">' + (done[k] ? 'Done: ' : 'Later: ') + '</span>' + esc(s.text.split('. ')[0].replace(/\.$/, '')) ) + '</span></li>').join('') + '</ol>';
+      const s = l.steps[cur];
+      h += '<div class="line" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" data-showme="' + s.target + '">Show me where</button>' + (s.manual ? '<button type="button" class="btn primary" data-lessonnext="' + cur + '">Next</button>' : '<span class="small muted" style="align-self:center">Ticks by itself when done.</span>') + '</div>';
+    }
+    if (h !== ui.coachHtml) { el.innerHTML = h; ui.coachHtml = h; }
+    el.hidden = false;
+  }
+
+  // ---------------- projects: save, open, share ----------------
+  function renderProjects() {
+    const list = FM.projects.list();
+    const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : new Date(t).toLocaleDateString(); };
+    let h = '<div class="dlg-head"><h2 id="projDlgTitle">My projects</h2><button type="button" class="x" data-closedlg="1" aria-label="Close">×</button></div>';
+    h += '<div class="section-title read">Save this project</div><div class="sendline"><input type="text" id="saveName" value="' + esc(S.title || 'My project') + '" aria-label="Project name"><button type="button" class="btn primary" data-saveproj="1">Save</button></div>';
+    h += '<p class="small muted" style="margin:4px 0 0">Saved in this browser. Saving again with the same name and board updates it.</p>';
+    h += '<div class="section-title change">Saved here</div>';
+    h += list.length ? '<ul class="projlist">' + list.map((e) => '<li><span class="icons">' + e.parts.slice(0, 4).map((id) => (FM.parts[id] ? FM.icon(FM.parts[id], 28) : '')).join('') + '</span><span class="t"><b>' + esc(e.title) + '</b><small>' + esc(FM.boards[e.board] ? FM.boards[e.board].short : e.board) + ' · ' + esc(ago(e.saved)) + '</small></span><button type="button" class="btn small" data-openproj="' + esc(e.id) + '">Open</button><button type="button" class="btn small ghost" data-delproj="' + esc(e.id) + '" aria-label="Delete ' + esc(e.title) + '">Delete</button></li>').join('') + '</ul>' : '<p class="small muted">Nothing saved yet.</p>';
+    h += '<div class="section-title do">Share</div><div class="line" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" data-share="link">Copy share link</button><button type="button" class="btn" data-share="code">Copy share code</button>' + (inFrame ? '' : '<button type="button" class="btn" data-share="file">Download project file</button>') + '</div>';
+    h += '<p class="small muted" style="margin:4px 0 0">A share code works anywhere: paste it below on another computer. Your Wi-Fi password and Telegram bot token are left out.</p>';
+    h += '<div class="section-title">Open a shared project</div><textarea id="shareIn" rows="3" placeholder="Paste a share link or share code" aria-label="Share link or code"></textarea>' +
+      '<div class="line" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button type="button" class="btn primary" data-openshare="1">Open</button><label class="btn">Open a project file<input type="file" id="projFile" accept=".json,application/json" hidden></label></div>';
+    $('#projBody').innerHTML = h;
+  }
+  function openProjects() { renderProjects(); const d = $('#projDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
+  function closeProjects() { const d = $('#projDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+  function openProject(p, how) {
+    const snap = snapshot();
+    const keepNet = S.program.net || {};
+    S.board = p.board; S.lang = p.lang; S.build = p.build; S.title = p.title; S.starter = null;
+    S.program = Object.assign(FM.newProgram(), p.program);
+    // a shared project has no secrets; keep the ones already typed on this computer
+    ['pass', 'token'].forEach((k) => { if (!S.program.net[k] && keepNet[k]) S.program.net[k] = keepNet[k]; });
+    S.codeEdited = !!p.code; S.code = p.code || '';
+    S.sel = p.build[0] ? p.build[0].uid : null;
+    FM.sim.reset();
+    closeProjects();
+    render();
+    toast('Opened "' + p.title + '"' + (how ? ' ' + how : '') + '.' + (p.code ? ' It has hand-edited code: read it before you upload.' : ''), () => restore(snap));
+  }
+  async function copyText(text, what) {
+    try { await navigator.clipboard.writeText(text); toast(what + ' copied.'); }
+    catch (err) { const t = $('#shareIn'); t.value = text; t.focus(); t.select(); toast('Press Ctrl+C (or Cmd+C) to copy the ' + what.toLowerCase() + '.'); }
+  }
+  async function shareProject(kind) {
+    const p = FM.projects.pack(S, { share: true });
+    if (kind === 'file') { const blob = new Blob([FM.projects.fileText(p)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = FM.safeName(p.title) + '.fm.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); return; }
+    const code = await FM.projects.encode(p);
+    if (kind === 'code') return copyText(code, 'Share code');
+    return copyText(location.href.split('#')[0] + '#share=' + code, 'Share link');
+  }
+  async function openShared(text, how) {
+    try { openProject(await FM.projects.decode(text), how); } catch (err) { toast(err.message); }
   }
 
   // ---------------- render ----------------
   function render() {
     regenerate();
     if (S.sel && !S.sel.startsWith('part:') && !A.byUid[S.sel]) S.sel = null;
-    renderTop(); renderStarters(); renderGallery(); renderAbility(); renderFlow(); FM.sim.render(); renderBoard(); renderCode();
+    renderTop(); renderLessons(); renderStarters(); renderGallery(); renderAbility(); renderFlow(); FM.sim.render(); renderBoard(); renderCode();
+    renderCoach();
     save();
   }
   // Light refresh after typing: code, previews and wires, without rebuilding inputs.
@@ -634,6 +769,28 @@
       if (!t) { if (ui.picker && !e.target.closest('.picker')) { ui.picker = null; renderFlow(); } return; }
       const d = t.dataset;
       if (d.tpl) return useTemplate(d.tpl);
+      if (d.closedlg) return closeProjects();
+      if (d.lesson) return startLesson(d.lesson);
+      if (d.lessonend) { S.lesson = null; renderCoach(); renderLessons(); return save(); }
+      if (d.lessonnext != null) { S.lesson.at = +d.lessonnext + 1; renderCoach(); return save(); }
+      if (d.showme) { const el2 = document.getElementById(d.showme); if (el2) { el2.scrollIntoView({ behavior: 'smooth', block: 'start' }); el2.classList.remove('flash'); void el2.offsetWidth; el2.classList.add('flash'); } return; }
+      if (d.wcopen) { ui.wire = { uid: d.wcopen, chosen: {} }; return renderAbility(); }
+      if (d.wcclose) { ui.wire = null; return renderAbility(); }
+      if (d.wcfill) { const i = A.byUid[ui.wire.uid]; ui.wire.chosen = Object.assign({}, i.pins); return renderAbility(); }
+      if (d.wcreset) { const b = S.build.find((x) => x.uid === d.wcreset); if (b) delete b.pins; render(); return toast('Back to the planned pins.'); }
+      if (d.wcfollow) {
+        const i = A.byUid[ui.wire.uid];
+        const b = S.build.find((x) => x.uid === i.uid);
+        b.pins = Object.assign({}, b.pins, FM.followWiring(FM.checkWiring(A, i, ui.wire.chosen)));
+        S.codeEdited = false;
+        render();
+        return toast('Done. The pin plan and the code now use your pins.');
+      }
+      if (d.saveproj) { const name = ($('#saveName').value || '').trim() || 'My project'; S.title = name; const e2 = FM.projects.saveAs(FM.projects.pack(S)); if (e2) ui.flags.saved = true; render(); renderProjects(); return toast(e2 ? 'Saved "' + name + '".' : 'This browser blocks saving. Use a share code instead.'); }
+      if (d.openproj) { const e2 = FM.projects.list().find((x) => x.id === d.openproj); const p = e2 && FM.projects.sanitize(e2.project); if (p) { ['pass', 'token'].forEach((k) => { p.program.net[k] = (e2.project.program.net || {})[k] || ''; }); openProject(p); } return; }
+      if (d.delproj) { const e2 = FM.projects.list().find((x) => x.id === d.delproj); FM.projects.remove(d.delproj); renderProjects(); return toast('Deleted "' + (e2 ? e2.title : 'project') + '".', e2 ? () => { const l = FM.projects.list(); l.unshift(e2); try { localStorage.setItem('fm-projects-v1', JSON.stringify(l)); } catch (err) { /* blocked */ } renderProjects(); } : null); }
+      if (d.share) return shareProject(d.share);
+      if (d.openshare) return openShared($('#shareIn').value, 'from the share code');
       if (d.cat) { S.cat = d.cat; return renderGallery(); }
       if (d.part) return clickPart(d.part);
       if (d.remove) { e.stopPropagation(); return removeInst(d.remove); }
@@ -686,7 +843,7 @@
       if (d.ports) return refreshPorts();
       if (d.serial === 'on') return connectSerial();
       if (d.serial === 'off') { await FM.serial.disconnect(); return render(); }
-      if (d.clearmon) { ui.monitor = ''; return renderCode(); }
+      if (d.clearmon) { ui.monitor = ''; ui.plot = FM.plotStore(); ui.partial = ''; return renderCode(); }
       if (d.send) return sendLine();
       if (d.setboard) { S.board = d.setboard; S.lang = null; return render(); }
       if (d.mpupload) return mpUpload();
@@ -724,6 +881,8 @@
       }
       if (t.id === 'langSel') { S.lang = t.value; S.codeEdited = false; return render(); }
       if (t.id === 'portSel') { ui.port = t.value; return; }
+      if (t.dataset.wc != null && ui.wire) { if (t.value) ui.wire.chosen[t.dataset.wc] = t.value; else delete ui.wire.chosen[t.dataset.wc]; renderAbility(); const n = $('[data-wc="' + t.dataset.wc + '"]'); if (n) n.focus(); return; }
+      if (t.id === 'projFile' && t.files[0]) { const f = t.files[0]; if (f.size > 500000) return toast('That file is too big to be a project.'); f.text().then((txt2) => openShared(txt2, 'from ' + f.name)); t.value = ''; return; }
       if (t.dataset.rename != null) { renameRead(+t.dataset.rename, t.value); return render(); }
       if (t.dataset.via) { P().listen.via = t.dataset.via; return render(); }
       if (t.dataset.reply) { const L = P().listen; const v = t.dataset.reply; L.replies = t.checked ? L.replies.concat([v]) : L.replies.filter((x) => x !== v); return render(); }
@@ -752,6 +911,9 @@
       if (e.key === 'Escape' && ui.picker) { ui.picker = null; renderFlow(); }
     });
 
+    $('#projectsBtn').onclick = openProjects;
+    $('#projDlg').addEventListener('click', (e) => { if (e.target.id === 'projDlg') closeProjects(); });
+    window.addEventListener('hashchange', () => { if (/^#share=/.test(location.hash)) { const h = location.hash; history.replaceState(null, '', location.pathname + location.search); openShared(h, 'from the link'); } });
     $('#modeLoop').onclick = () => { P().mode = 'loop'; render(); };
     $('#modeListen').onclick = () => { P().mode = 'listen'; render(); };
     $('#helperPill').onclick = async () => { await FM.helper.check(); render(); toast(FM.helper.online ? 'Helper connected.' : 'Helper not found. Run python3 helper/fm_helper.py and open http://localhost:8765.'); };
@@ -761,7 +923,18 @@
     FM.serial.onStatus(() => { renderTop(); if (S.tab === 'serial' || S.tab === 'upload') renderCode(); });
   }
 
+  // Lines like "co2:812 temperature:22.4" (from the "Draw a live graph" output) become a graph.
+  function serialChart() {
+    if (!ui.plot.order.length) return '<p class="small muted">Add "Draw a live graph" to the program and the values are drawn here while the board runs.</p>';
+    return FM.chart(ui.plot);
+  }
+  let chartQueued = false;
   function appendMonitor(text) {
+    const lines = (ui.partial + text).split(/\r?\n/);
+    ui.partial = lines.pop().slice(-500);
+    let plotted = false;
+    lines.forEach((l) => { const v = FM.plotParse(l); if (v) { FM.plotPush(ui.plot, v); plotted = true; } });
+    if (plotted && !chartQueued) { chartQueued = true; setTimeout(() => { chartQueued = false; const c = $('#serialChart'); if (c) c.innerHTML = serialChart(); }, 300); }
     ui.monitor = (ui.monitor + text.replace(/\x04|\x01|\x02|\x03/g, '')).slice(-60000);
     const mon = $('#monitor');
     if (mon) { mon.textContent = ui.monitor; mon.scrollTop = mon.scrollHeight; }
@@ -828,8 +1001,10 @@
     bindEvents();
     FM.sim.mount($('#sim'), () => ({ A, prog: P(), board: board(), lang: lang() }));
     render();
-    if (location.hash) { const el = document.getElementById(location.hash.slice(1)); if (el) el.scrollIntoView(); }
+    if (/^#share=/.test(location.hash)) { const h = location.hash; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* sandboxed */ } openShared(h, 'from the link'); }
+    else if (location.hash) { const el = document.getElementById(location.hash.slice(1)); if (el) el.scrollIntoView(); }
     FM.helper.check().then(() => { renderTop(); if (S.tab !== 'code') renderCode(); });
+    setInterval(() => { if (S.lesson) renderCoach(); }, 700); // the simulator changes things between renders
   }
   FM.app = { get state() { return S; }, render };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

@@ -1,7 +1,7 @@
 /* Program helpers shared by the UI and the tests: templates, cleaning up
    references to removed parts, and picking the right code generator. */
 (function () {
-  FM.newProgram = () => ({ mode: 'loop', interval: 5, reads: [], steps: [], actions: [], listen: { via: 'typed', rules: [], replies: ['print'] } });
+  FM.newProgram = () => ({ mode: 'loop', interval: 5, reads: [], steps: [], actions: [], listen: { via: 'typed', rules: [], replies: ['print'] }, net: FM.netDefaults() });
 
   FM.loadTemplate = function (t, board) {
     const build = t.parts.map((id) => ({ uid: FM.uid(), id }));
@@ -15,7 +15,7 @@
 
   // Remove anything that points at a part that is no longer in the build.
   FM.prune = function (program, A) {
-    const ok = (uid) => uid === 'sys' || uid === 'print' || uid === 'log' || (A.byUid[uid] && A.byUid[uid].supported);
+    const ok = (uid) => uid === 'sys' || uid === 'print' || uid === 'log' || FM.NET_OUTPUTS.includes(uid) || (A.byUid[uid] && A.byUid[uid].supported);
     program.reads = program.reads.filter((r) => ok(r.uid) && FM.valueMeta(A, r));
     program.actions = program.actions.filter((a) => ok(a.uid));
     const names = FM.programNames(A, program).map((n) => n.name);
@@ -36,9 +36,13 @@
     return name + '_' + n;
   };
 
+  const langs0 = (board, lang) => (FM.langsFor(board).includes(lang) ? lang : FM.langsFor(board)[0]);
+
   FM.generate = function (board, build, program, meta, lang) {
     const A = FM.allocate(board, build);
     FM.prune(program, A);
+    // network outputs only stay where the board can reach the network
+    if (!FM.hasNetwork(board, langs0(board, lang))) program.actions = program.actions.filter((a) => a.uid !== 'mqtt' && a.uid !== 'telegram');
     const langs = FM.langsFor(board);
     const L = langs.includes(lang) ? lang : langs[0];
     const out = FM.gen[L](A, program, meta || {});
@@ -52,6 +56,11 @@
   FM.builtinOutputs = function (board, lang) {
     const out = [{ uid: 'print', act: 'print', name: lang === 'python' ? 'Print in the terminal' : 'Print to the serial monitor', msg: true }];
     if (lang !== 'arduino') out.push({ uid: 'log', act: 'log', name: lang === 'python' ? 'Save to readings.csv' : 'Save to log.csv on the board' });
+    out.push({ uid: 'plot', act: 'plot', name: 'Draw a live graph' });
+    if (FM.hasNetwork(board, lang)) {
+      out.push({ uid: 'mqtt', act: 'mqtt', name: 'Send to MQTT' + (board.family === 'pico' ? ' (Pico W)' : '') });
+      out.push({ uid: 'telegram', act: 'telegram', name: 'Send a Telegram message' + (board.family === 'pico' ? ' (Pico W)' : ''), msg: true });
+    }
     return out;
   };
 })();
