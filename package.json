@@ -1,0 +1,11 @@
+{
+  "name": "friendly-microman",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Visual workbench for Raspberry Pi, Pico, ESP32 and Arduino beginners",
+  "scripts": {
+    "test": "node tests/generate.test.js && node tests/upload.test.js && node tests/projects.test.js && node tests/wiring.test.js && node tests/lessons.test.js",
+    "start": "python3 helper/fm_helper.py",
+    "bundle": "node tools/build-single.js friendly-microman.html"
+  }
+}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>friendly-microman</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Pick parts, get the wiring, build a program from boxes, and see the real code for Raspberry Pi, Pico, ESP32 and Arduino.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="topbar" id="top">
+  <div class="wrap">
+    <div class="brand"><h1>friendly-microman</h1><span>wire it, build it, run it</span></div>
+    <nav class="nav" aria-label="Sections">
+      <a href="#parts">Parts</a><a href="#program">Program</a><a href="#sim">Try it</a><a href="#board">Wiring</a><a href="#code">Code</a>
+    </nav>
+    <label for="boardSel">Board <select id="boardSel"></select></label>
+    <label for="langSel">Language <select id="langSel"></select></label>
+    <button class="pill" id="projectsBtn" type="button" title="Save, open and share projects">My projects</button>
+    <button class="pill" id="helperPill" type="button" title="Local helper for compiling, uploading and installing libraries"><span class="dot"></span><span id="helperText">Helper offline</span></button>
+    <button class="pill" id="serialPill" type="button" title="Connect a board over USB (Chrome or Edge)"><span class="dot"></span><span id="serialText">Connect USB board</span></button>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+    <section aria-labelledby="lessonsTitle">
+      <div class="panel-head"><h2 id="lessonsTitle">Learn step by step</h2><p>Short lessons that check each step for you. No hardware needed: the virtual parts stand in.</p></div>
+      <div class="starters" id="lessons"></div>
+    </section>
+
+    <section aria-labelledby="startersTitle">
+      <div class="panel-head"><h2 id="startersTitle">Start from a project</h2><p>Each one adds the parts and the program. Change anything afterwards.</p></div>
+      <div class="starters" id="starters"></div>
+    </section>
+
+    <div class="row2" id="parts">
+      <section class="panel" aria-labelledby="galleryTitle">
+        <div class="panel-head"><h2 id="galleryTitle">Parts</h2><p>Tap a part to connect it. Pins are chosen for you so nothing clashes.</p></div>
+        <input class="search" id="partSearch" type="text" placeholder="Search parts, e.g. CO2, gyro, screen" aria-label="Search parts">
+        <div class="filters" id="catFilters"></div>
+        <div class="gallery" id="gallery"></div>
+      </section>
+      <section class="panel" id="ability" aria-live="polite"></section>
+    </div>
+
+    <section class="panel" id="program" aria-labelledby="programTitle">
+      <div class="flow-top">
+        <h2 id="programTitle">Program</h2>
+        <div class="seg" role="group" aria-label="Program type">
+          <button type="button" id="modeLoop">Read sensors in a loop</button>
+          <button type="button" id="modeListen">Listen for commands</button>
+        </div>
+        <label class="small muted" for="projTitle">Name <input type="text" id="projTitle" value="My project"></label>
+      </div>
+      <div class="flow" id="flow"></div>
+    </section>
+
+    <section class="panel" id="sim" aria-labelledby="simTitle"></section>
+
+    <div class="row2">
+      <section class="panel" id="board" aria-labelledby="boardTitle"></section>
+      <section class="panel" id="code" aria-labelledby="codeTitle"></section>
+    </div>
+  </main>
+  <footer>friendly-microman · Pin maps are simplified drawings; always check your board's printed labels before powering up.</footer>
+</div>
+<aside id="coach" class="coach" aria-live="polite" hidden></aside>
+<div id="toast" class="toast" hidden></div>
+<dialog id="projDlg" aria-labelledby="projDlgTitle"><div id="projBody"></div></dialog>
+
+<script src="js/core.js"></script>
+<script src="js/boards/pi.js"></script>
+<script src="js/boards/pico.js"></script>
+<script src="js/boards/esp.js"></script>
+<script src="js/boards/arduino.js"></script>
+<script src="js/parts.js"></script>
+<script src="js/libraries.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/allocate.js"></script>
+<script src="js/wirecheck.js"></script>
+<script src="js/gen/common.js"></script>
+<script src="js/gen/net.js"></script>
+<script src="js/gen/python.js"></script>
+<script src="js/gen/micropython.js"></script>
+<script src="js/gen/arduino.js"></script>
+<script src="js/templates.js"></script>
+<script src="js/program.js"></script>
+<script src="js/projects.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/lessons.js"></script>
+<script src="js/serial.js"></script>
+<script src="js/helper-client.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
